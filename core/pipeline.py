@@ -615,9 +615,7 @@ class FluxConditionalPipeline(DiffusionPipeline, SD3LoraLoaderMixin):
         negative_pooled_prompt_embeds: Optional[torch.FloatTensor] = None,
         no_cfg_until_timestep: int = 2,
         image: Optional[torch.FloatTensor] = None,
-        image_path = None,
-        cut_output = True,
-        gemini_prompt = True
+        cut_output = True
     ):
         r"""
         Function invoked when calling the pipeline for generation.
@@ -782,7 +780,7 @@ class FluxConditionalPipeline(DiffusionPipeline, SD3LoraLoaderMixin):
         image = torch.nn.functional.interpolate(image, size=(height, width // 2))
         black_image = torch.full((1, 3, height, width // 2), -1.0)
         image = torch.cat([image, black_image], dim=3)
-        latents_cond = self.vae.encode(image.to(self.vae.dtype).to(self.vae.device)).latent_dist.sample()
+        latents_cond = self.vae.encode(image.to(dtype=self.vae.dtype).to(device)).latent_dist.sample()
         latents_cond = (
             latents_cond - self.vae.config.shift_factor
         ) * self.vae.config.scaling_factor
@@ -829,11 +827,6 @@ class FluxConditionalPipeline(DiffusionPipeline, SD3LoraLoaderMixin):
         )
         self._num_timesteps = len(timesteps)
 
-        latents = latents.to(self.transformer.device)
-        latent_image_ids = latent_image_ids.to(self.transformer.device)
-        timesteps = timesteps.to(self.transformer.device)
-        text_ids = text_ids.to(self.transformer.device)
-
         # 6. Denoising loop
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
@@ -846,7 +839,7 @@ class FluxConditionalPipeline(DiffusionPipeline, SD3LoraLoaderMixin):
                 # handle guidance
                 if self.transformer.config.guidance_embeds:
                     guidance = torch.tensor(
-                        [guidance_scale], device=self.transformer.device
+                        [guidance_scale], device=device
                     )
                     guidance = guidance.expand(latents.shape[0])
                 else:
@@ -859,79 +852,58 @@ class FluxConditionalPipeline(DiffusionPipeline, SD3LoraLoaderMixin):
                     )
 
                 noise_pred = self.transformer(
-                    hidden_states=latents.to(
-                        device=self.transformer.device, dtype=self.transformer.dtype
-                    ),
+                    hidden_states=latents,
                     # YiYi notes: divide it by 1000 for now because we scale it by 1000 in the transforme rmodel (we should not keep it but I want to keep the inputs same for the model for testing)
                     timestep=timestep / 1000,
                     guidance=guidance,
-                    pooled_projections=pooled_prompt_embeds.to(
-                        device=self.transformer.device, dtype=self.transformer.dtype
-                    ),
-                    encoder_hidden_states=prompt_embeds.to(
-                        device=self.transformer.device, dtype=self.transformer.dtype
-                    ),
+                    pooled_projections=pooled_prompt_embeds,
+                    encoder_hidden_states=prompt_embeds,
                     txt_ids=text_ids,
                     img_ids=latent_image_ids,
                     joint_attention_kwargs=self.joint_attention_kwargs,
                     return_dict=False,
-                    condition_hidden_states=latents_cond.to(
-                        device=self.transformer.device, dtype=self.transformer.dtype
-                    ),
+                    condition_hidden_states=latents_cond,
                     **extra_transformer_args,
                 )[0]
 
                 # TODO optionally use batch prediction to speed this up.
                 if guidance_scale_real_i > 1.0 and i >= no_cfg_until_timestep:
                     noise_pred_uncond = self.transformer(
-                        hidden_states=latents.to(
-                            device=self.transformer.device, dtype=self.transformer.dtype
-                        ),
+                        hidden_states=latents,
                         # YiYi notes: divide it by 1000 for now because we scale it by 1000 in the transforme rmodel (we should not keep it but I want to keep the inputs same for the model for testing)
                         timestep=timestep / 1000,
                         guidance=guidance,
-                        pooled_projections=negative_pooled_prompt_embeds.to(
-                            device=self.transformer.device, dtype=self.transformer.dtype
-                        ),
-                        encoder_hidden_states=negative_prompt_embeds.to(
-                            device=self.transformer.device, dtype=self.transformer.dtype
-                        ),
-                        txt_ids=negative_text_ids.to(device=self.transformer.device),
-                        img_ids=latent_image_ids.to(device=self.transformer.device),
+                        pooled_projections=negative_pooled_prompt_embeds,
+                        encoder_hidden_states=negative_prompt_embeds,
+                        txt_ids=negative_text_ids,
+                        img_ids=latent_image_ids,
                         joint_attention_kwargs=self.joint_attention_kwargs,
                         return_dict=False,
-                        condition_hidden_states=torch.zeros_like(latents_cond).to(
-                            device=self.transformer.device, dtype=self.transformer.dtype
-                        ),
+                        condition_hidden_states=torch.zeros_like(latents_cond),
                     )[0]
                     noise_pred_uncond_t = self.transformer(
-                        hidden_states=latents.to(
-                            device=self.transformer.device, dtype=self.transformer.dtype
-                        ),
+                        hidden_states=latents,
                         # YiYi notes: divide it by 1000 for now because we scale it by 1000 in the transforme rmodel (we should not keep it but I want to keep the inputs same for the model for testing)
                         timestep=timestep / 1000,
                         guidance=guidance,
-                        pooled_projections=negative_pooled_prompt_embeds.to(
-                            device=self.transformer.device, dtype=self.transformer.dtype
-                        ),
-                        encoder_hidden_states=negative_prompt_embeds.to(
-                            device=self.transformer.device, dtype=self.transformer.dtype
-                        ),
-                        txt_ids=negative_text_ids.to(device=self.transformer.device),
-                        img_ids=latent_image_ids.to(device=self.transformer.device),
+                        pooled_projections=negative_pooled_prompt_embeds,
+                        encoder_hidden_states=negative_prompt_embeds,
+                        txt_ids=negative_text_ids,
+                        img_ids=latent_image_ids,
                         joint_attention_kwargs=self.joint_attention_kwargs,
                         return_dict=False,
-                        condition_hidden_states=latents_cond.to(
-                            device=self.transformer.device, dtype=self.transformer.dtype
-                        ),
+                        condition_hidden_states=latents_cond,
                     )[0]
 
                     # noise_pred = noise_pred_uncond + guidance_scale_real * (
                     #     noise_pred - noise_pred_uncond
                     # )
-                    noise_pred = noise_pred_uncond + \
-                        guidance_scale_real_i * (noise_pred_uncond_t - noise_pred_uncond) + \
-                        guidance_scale_real_t * (noise_pred - noise_pred_uncond_t)
+                    noise_pred = (
+                        noise_pred_uncond
+                        + guidance_scale_real_i
+                        * (noise_pred_uncond_t - noise_pred_uncond)
+                        + guidance_scale_real_t * (noise_pred - noise_pred_uncond_t)
+                    )
 
                 # compute the previous noisy sample x_t -> x_t-1
                 latents_dtype = latents.dtype
@@ -976,7 +948,7 @@ class FluxConditionalPipeline(DiffusionPipeline, SD3LoraLoaderMixin):
             ) + self.vae.config.shift_factor
 
             image = self.vae.decode(
-                latents.to(device=self.vae.device, dtype=self.vae.dtype),
+                latents,
                 return_dict=False,
             )[0]
             

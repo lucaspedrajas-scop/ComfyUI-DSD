@@ -10,7 +10,7 @@ from pathlib import Path
 from tqdm import tqdm
 from huggingface_hub import hf_hub_download, snapshot_download
 
-from .utils import get_model_path, get_lora_path, comfy_to_pil, pil_to_comfy, center_crop_and_resize
+from .utils import get_model_path, get_lora_path, comfy_to_pil, pil_to_comfy, resize_and_center_crop, center_crop, pad_resize, fit_resize
 from .dsd_imports import FluxConditionalPipeline, FluxTransformer2DConditionalModel, enhance_prompt, IMPORTS_AVAILABLE
 from comfy.utils import ProgressBar
 try:
@@ -42,7 +42,10 @@ class DSDModelLoader:
                 "model_path": ("STRING", {"default": ""}),
                 "lora_path": ("STRING", {"default": ""}),
                 "device": (["cuda", "cpu"], {"default": "cuda"}),
-                "dtype": (["bfloat16", "float16", "float32"], {"default": "bfloat16"})
+                "dtype": (["bfloat16", "float16", "float32"], {"default": "bfloat16"}),
+                "low_cpu_mem_usage": ("BOOLEAN", {"default": True, "tooltip": "Reduces CPU memory usage during model loading. Recommended for faster loading."}),
+                "model_cpu_offload": ("BOOLEAN", {"default": False, "tooltip": "Offloads state dict to reduce memory usage during loading. May slow down inference speed."}), 
+                "sequential_cpu_offload": ("BOOLEAN", {"default": False, "tooltip": "Enables sequential CPU offloading. Only use if low on VRAM. Significantly impacts inference speed."})
             }
         }
     
@@ -51,7 +54,7 @@ class DSDModelLoader:
     FUNCTION = "load_model"
     CATEGORY = "DSD"
     
-    def load_model(self, model_path, lora_path, device, dtype):
+    def load_model(self, model_path, lora_path, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload):
         if not IMPORTS_AVAILABLE:
             raise ImportError("Could not import DSD modules. Make sure DSD project files (pipeline.py, transformer.py) are properly installed in the parent directory.")
         
@@ -83,14 +86,13 @@ class DSDModelLoader:
         print("Loading transformer...")
 
         model_folder = os.path.dirname(model_path)
-        # Load model with optimized parameters
+        # Load model with user-specified parameters
         transformer = FluxTransformer2DConditionalModel.from_pretrained(
             model_folder,
             torch_dtype=torch_dtype,
-            low_cpu_mem_usage=True,  # Changed to True for faster loading
+            low_cpu_mem_usage=low_cpu_mem_usage,
             ignore_mismatched_sizes=True,
-            use_safetensors=True,    # Added for faster loading
-            offload_state_dict=True  # Added to reduce memory usage during loading
+            use_safetensors=True,
         )
 
         print("Loading pipeline...")
@@ -110,8 +112,16 @@ class DSDModelLoader:
 
         print("Moving to device...")
         
-        # Move to device
-        pipe.to(device)
+        # Apply sequential CPU offloading if requested and device is CPU
+        if model_cpu_offload:
+            pipe.enable_model_cpu_offload()
+        if sequential_cpu_offload:
+            pipe.enable_sequential_cpu_offload()
+        if not model_cpu_offload and not sequential_cpu_offload:
+            pipe.to(device)
+            
+            
+
 
         print("Model loaded successfully")
         
@@ -186,9 +196,12 @@ class DSDImageGenerator:
                 "image_guidance_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 20.0, "step": 0.1}),
                 "text_guidance_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 20.0, "step": 0.1}),
                 "num_inference_steps": ("INT", {"default": 28, "min": 1, "max": 100}),
-                "width": ("INT", {"default": 1024, "min": 512, "max": 2048, "step": 8}),
-                "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 8}),
+                "width": ("INT", {"default": 1024, "min": 512, "max": 2048, "step": 64}),
+                "height": ("INT", {"default": 512, "min": 512, "max": 2048, "step": 64}),
                 "use_gemini_prompt": ("BOOLEAN", {"default": False})
+            },
+            "optional": {
+                "resize_params": ("RESIZE_PARAMS",),
             }
         }
     
@@ -216,15 +229,33 @@ class DSDImageGenerator:
     
     def generate(self, dsd_model, image, prompt, negative_prompt, seed,
                 guidance_scale, image_guidance_scale, text_guidance_scale, num_inference_steps,
-                width, height, use_gemini_prompt):
+                width, height, use_gemini_prompt, resize_params=None):
         # Initialize progress bar
         pbar = ProgressBar(num_inference_steps)
         # Reset progress value
         self.progress_value = 0.0
         
-        # Convert from ComfyUI image format to PIL and prepare
+        # Convert from ComfyUI image format to PIL
         pil_image = comfy_to_pil(image)
-        pil_image = center_crop_and_resize(pil_image, width//2)  # DSD expects 512x512 input images
+        
+        # Process the image based on resize_params
+        if resize_params is not None:
+            method = resize_params.get("method", "center_crop")
+            interpolation = resize_params.get("interpolation", "LANCZOS")
+            pad_color = resize_params.get("pad_color", (0, 0, 0))
+            
+            # Apply the selected resize method
+            if method == "resize_and_center_crop":
+                pil_image = resize_and_center_crop(pil_image, height, width//2)
+            elif method == "center_crop":
+                pil_image = center_crop(pil_image, height, width//2, interpolation)
+            elif method == "pad":
+                pil_image = pad_resize(pil_image, height, width//2, pad_color, interpolation)
+            elif method == "fit":
+                pil_image = fit_resize(pil_image, height, width//2, interpolation)
+        else:
+            # Use the default center_crop_and_resize if no resize_params provided
+            pil_image = resize_and_center_crop(pil_image, height, width//2)
         
         # Clean prompt
         prompt = prompt.strip().replace("\n", "").replace("\r", "")
@@ -271,7 +302,6 @@ class DSDImageGenerator:
             image=pil_image,
             guidance_scale_real_i=image_guidance_scale,
             guidance_scale_real_t=text_guidance_scale,
-            gemini_prompt=use_gemini_prompt,
             callback_on_step_end=progress_callback,
             generator=generator
         ).images
@@ -367,7 +397,10 @@ class DSDModelDownloader:
                 "repo_id": ("STRING", {"default": "primecai/dsd_model"}),
                 "force_download": ("BOOLEAN", {"default": False}),
                 "device": (["cuda", "cpu"], {"default": "cuda"}),
-                "dtype": (["bfloat16", "float16", "float32"], {"default": "bfloat16"})
+                "dtype": (["bfloat16", "float16", "float32"], {"default": "bfloat16", "tooltip": "bfloat16 provides best speed/memory tradeoff"}),
+                "low_cpu_mem_usage": ("BOOLEAN", {"default": True, "tooltip": "Reduces CPU memory usage during model loading. Recommended for faster loading."}),
+                "model_cpu_offload": ("BOOLEAN", {"default": False, "tooltip": "Offloads state dict to reduce memory usage during loading. May slow down loading speed."}), 
+                "sequential_cpu_offload": ("BOOLEAN", {"default": False, "tooltip": "Enables sequential CPU offloading. Only use if low on VRAM. Significantly impacts loading speed."})
             },
             "optional": {
                 "hf_token": ("STRING", {"default": "", "multiline": False, "tooltip": "Enter your Hugging Face token here or use the environment variable HF_TOKEN."})
@@ -389,7 +422,7 @@ class DSDModelDownloader:
             "status_text": self.status_text
         }
     
-    def download_and_load_model(self, repo_id, force_download, device, dtype, hf_token=""):
+    def download_and_load_model(self, repo_id, force_download, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload, hf_token=""):
         if not IMPORTS_AVAILABLE:
             raise ImportError("Could not import DSD modules. Make sure DSD project files (pipeline.py, transformer.py) are properly installed in the parent directory.")
         
@@ -466,14 +499,13 @@ class DSDModelDownloader:
         self.progress_value = 0.6
         
         try:
-            # Load model with optimized parameters
+            # Load model with user-specified parameters
             transformer = FluxTransformer2DConditionalModel.from_pretrained(
                 transformer_path,
                 torch_dtype=torch_dtype,
-                low_cpu_mem_usage=True,
+                low_cpu_mem_usage=low_cpu_mem_usage,
                 ignore_mismatched_sizes=True,
                 use_safetensors=True,
-                offload_state_dict=True,
                 token=hf_token
             )
             
@@ -496,12 +528,15 @@ class DSDModelDownloader:
             # Load LoRA weights
             pipe.load_lora_weights(lora_file)
             
-            self.status_text = f"Moving to {device}..."
-            print(self.status_text)
-            self.progress_value = 0.9
+            # Apply sequential CPU offloading if requested and device is CPU
+            if model_cpu_offload:
+                pipe.enable_model_cpu_offload()
+            if sequential_cpu_offload:
+                pipe.enable_sequential_cpu_offload()
+            if not model_cpu_offload and not sequential_cpu_offload:
+                pipe.to(device)
             
-            # Move to device
-            pipe.to(device)
+            self.progress_value = 0.9
             
             self.status_text = "Model loaded successfully"
             print(self.status_text)
@@ -515,13 +550,45 @@ class DSDModelDownloader:
             raise
 
 
+class DSDResizeSelector:
+    """Selects image resize options for DSD Image Generator"""
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "resize_method": (["resize_and_center_crop", "center_crop", "pad", "fit"], {"default": "resize_and_center_crop"}),
+                "interpolation": (["LANCZOS", "BICUBIC", "BILINEAR", "NEAREST"], {"default": "LANCZOS"}),
+                "pad_r": ("INT", {"default": 0, "min": 0, "max": 255}),
+                "pad_g": ("INT", {"default": 0, "min": 0, "max": 255}),
+                "pad_b": ("INT", {"default": 0, "min": 0, "max": 255}),
+            }
+        }
+    
+    RETURN_TYPES = ("RESIZE_PARAMS",)
+    RETURN_NAMES = ("resize_params",)
+    FUNCTION = "select_resize_options"
+    CATEGORY = "DSD"
+    
+    def select_resize_options(self, resize_method, interpolation, pad_r, pad_g, pad_b):
+        # Create a JSON object with the resize parameters
+        resize_params = {
+            "method": resize_method,
+            "interpolation": interpolation,
+            "pad_color": (pad_r, pad_g, pad_b)
+        }
+        
+        return (resize_params,)
+
+
 # Register nodes
 NODE_CLASS_MAPPINGS = {
     "DSDModelLoader": DSDModelLoader,
     "DSDGeminiPromptEnhancer": DSDGeminiPromptEnhancer,
     "DSDImageGenerator": DSDImageGenerator,
     "DSDModelSelector": DSDModelSelector,
-    "DSDModelDownloader": DSDModelDownloader
+    "DSDModelDownloader": DSDModelDownloader,
+    "DSDResizeSelector": DSDResizeSelector
 }
 
 # Node display names
@@ -530,5 +597,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "DSDGeminiPromptEnhancer": "DSD Gemini Prompt Enhancer",
     "DSDImageGenerator": "DSD Image Generator",
     "DSDModelSelector": "DSD Model Selector",
-    "DSDModelDownloader": "DSD Model Downloader"
+    "DSDModelDownloader": "DSD Model Downloader",
+    "DSDResizeSelector": "DSD Resize Selector"
 } 

@@ -52,6 +52,13 @@ pip install -r requirements.txt
 
 5. **DSD Image Generator**: Generates images with the DSD model
 
+6. **DSD Resize Selector**: Provides flexible image resizing options for the DSD Image Generator:
+   - **center_crop**: Center crops the image and resizes (default behavior)
+   - **crop**: Simple center crop and resize
+   - **pad**: Preserves aspect ratio and adds padding to reach target size
+   - **fit**: Resizes to target dimensions without preserving aspect ratio
+   - Additional options for interpolation method and padding color
+
 ## Basic Workflow
 
 ![Sample1](examples/screenshot.png)
