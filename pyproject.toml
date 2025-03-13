@@ -10,6 +10,6 @@ Repository = "https://github.com/irreveloper/ComfyUI-DSD"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "irreveloper"
 DisplayName = "ComfyUI-DSD"
 Icon = ""
