@@ -1,0 +1,15 @@
+[project]
+name = "dsd"
+description = "An Unofficial ComfyUI custom node package that integrates [a/Diffusion Self-Distillation (DSD)](https://github.com/primecai/diffusion-self-distillation) for zero-shot customized image generation.\nDSD is a model for subject-preserving image generation that allows you to create images of a specific subject in novel contexts without per-instance tuning."
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["torch>=2.0.0", "diffusers>=0.24.0", "transformers>=4.36.0", "sentencepiece>=0.1.99", "accelerate>=0.27.0", "google-genai>=0.1.0", "Pillow>=9.5.0", "protobuf>=4.25.0", "peft>=0.7.0", "hf_transfer"]
+
+[project.urls]
+Repository = "https://github.com/irreveloper/ComfyUI-DSD"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "irreveloper"
+DisplayName = "ComfyUI-DSD"
+Icon = ""
