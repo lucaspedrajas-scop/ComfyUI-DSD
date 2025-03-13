@@ -1,17 +1,46 @@
 {
-  "last_node_id": 38,
-  "last_link_id": 116,
+  "last_node_id": 39,
+  "last_link_id": 117,
   "nodes": [
     {
-      "id": 11,
-      "type": "PrimitiveNode",
+      "id": 18,
+      "type": "PreviewImage",
       "pos": [
-        20.652568817138672,
-        635.3331909179688
+        1214.10986328125,
+        -74.78528594970703
       ],
       "size": [
-        210,
-        88
+        406.026123046875,
+        409.0712585449219
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 115
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.26",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 3,
+      "type": "LoadImage",
+      "pos": [
+        -119.63543701171875,
+        -71.78013610839844
+      ],
+      "size": [
+        366.44219970703125,
+        419.337890625
       ],
       "flags": {},
       "order": 0,
@@ -19,34 +48,74 @@
       "inputs": [],
       "outputs": [
         {
-          "name": "STRING",
-          "type": "STRING",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "shape": 3,
           "links": [
-            111
-          ]
+            4,
+            109
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "shape": 3,
+          "links": []
         }
       ],
-      "title": "negative_prompt",
       "properties": {
-        "Run widget replace on values": false
+        "cnr_id": "comfy-core",
+        "ver": "0.3.26",
+        "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "text, watermark, blurry"
+        "DALL·E 2024-08-18 18.34.08 - A 2D anime-style character concept art in the style of Porco Rosso. The character is a young, male airplane mechanic in his early 20s, with messy brow.webp",
+        "image"
       ]
+    },
+    {
+      "id": 19,
+      "type": "PreviewImage",
+      "pos": [
+        1271.379638671875,
+        431.7550964355469
+      ],
+      "size": [
+        210,
+        246
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 113
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.26",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
     },
     {
       "id": 5,
       "type": "DSDGeminiPromptEnhancer",
       "pos": [
-        299.8087463378906,
-        312.0589294433594
+        299.41937255859375,
+        386.8332824707031
       ],
       "size": [
-        404.98046875,
-        125.29296875
+        334.03948974609375,
+        137.88925170898438
       ],
       "flags": {},
-      "order": 4,
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
@@ -75,28 +144,67 @@
         }
       ],
       "properties": {
-        "aux_id": "irreveloper/ComfyUI-DSD-Node",
+        "cnr_id": "dsd",
         "ver": "4642def54ab46095a128cc2f8d37abde99a0f099",
-        "Node name for S&R": "DSDGeminiPromptEnhancer"
+        "Node name for S&R": "DSDGeminiPromptEnhancer",
+        "aux_id": "irreveloper/ComfyUI-DSD-Node"
       },
       "widgets_values": [
-        "Superhero fights with evil fish underwater.",
+        "Side view of anime character.",
         ""
+      ]
+    },
+    {
+      "id": 39,
+      "type": "DSDResizeSelector",
+      "pos": [
+        314.8365478515625,
+        171.76687622070312
+      ],
+      "size": [
+        315,
+        154
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "resize_params",
+          "type": "RESIZE_PARAMS",
+          "links": [
+            117
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "cnr_id": "dsd",
+        "ver": "48d020ac58d05c8a14223dac597a645ee908684a",
+        "Node name for S&R": "DSDResizeSelector"
+      },
+      "widgets_values": [
+        "resize_and_center_crop",
+        "LANCZOS",
+        0,
+        0,
+        0
       ]
     },
     {
       "id": 38,
       "type": "DSDModelDownloader",
       "pos": [
-        317.01739501953125,
-        13.488250732421875
+        328.3520812988281,
+        -165.09207153320312
       ],
       "size": [
         315,
-        194
+        266
       ],
       "flags": {},
-      "order": 1,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -119,125 +227,28 @@
         }
       ],
       "properties": {
-        "aux_id": "irreveloper/ComfyUI-DSD-Node",
+        "cnr_id": "dsd",
         "ver": "4642def54ab46095a128cc2f8d37abde99a0f099",
-        "Node name for S&R": "DSDModelDownloader"
+        "Node name for S&R": "DSDModelDownloader",
+        "aux_id": "irreveloper/ComfyUI-DSD-Node"
       },
       "widgets_values": [
         "primecai/dsd_model",
         false,
         "cuda",
         "bfloat16",
+        true,
+        false,
+        false,
         ""
-      ]
-    },
-    {
-      "id": 19,
-      "type": "PreviewImage",
-      "pos": [
-        1260.008544921875,
-        416.4699401855469
-      ],
-      "size": [
-        210,
-        246
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 113
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.26",
-        "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 18,
-      "type": "PreviewImage",
-      "pos": [
-        1214.10986328125,
-        -74.78528594970703
-      ],
-      "size": [
-        406.026123046875,
-        409.0712585449219
-      ],
-      "flags": {},
-      "order": 6,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 115
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.26",
-        "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 3,
-      "type": "LoadImage",
-      "pos": [
-        -94.37196350097656,
-        -36.992637634277344
-      ],
-      "size": [
-        366.44219970703125,
-        419.337890625
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "shape": 3,
-          "links": [
-            4,
-            109
-          ],
-          "slot_index": 0
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "shape": 3,
-          "links": []
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.26",
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "image (17).webp",
-        "image"
       ]
     },
     {
       "id": 4,
       "type": "PrimitiveNode",
       "pos": [
-        -77.04129791259766,
-        436.9585266113281
+        -117.78815460205078,
+        407.2402648925781
       ],
       "size": [
         315,
@@ -262,22 +273,54 @@
         "Run widget replace on values": false
       },
       "widgets_values": [
-        "Superhero fights with evil fish underwater."
+        "Side view of anime character."
+      ]
+    },
+    {
+      "id": 11,
+      "type": "PrimitiveNode",
+      "pos": [
+        -106.84088897705078,
+        607.5902099609375
+      ],
+      "size": [
+        301.3577880859375,
+        88
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            111
+          ]
+        }
+      ],
+      "title": "negative_prompt",
+      "properties": {
+        "Run widget replace on values": false
+      },
+      "widgets_values": [
+        "text, watermark, blurry"
       ]
     },
     {
       "id": 37,
       "type": "DSDImageGenerator",
       "pos": [
-        754.3903198242188,
-        41.60234832763672
+        721.5396728515625,
+        86.6509017944336
       ],
       "size": [
         400,
         398
       ],
       "flags": {},
-      "order": 5,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -305,6 +348,12 @@
             "name": "negative_prompt"
           },
           "link": 111
+        },
+        {
+          "name": "resize_params",
+          "type": "RESIZE_PARAMS",
+          "shape": 7,
+          "link": 117
         }
       ],
       "outputs": [
@@ -329,9 +378,10 @@
         }
       ],
       "properties": {
-        "aux_id": "irreveloper/ComfyUI-DSD-Node",
+        "cnr_id": "dsd",
         "ver": "4642def54ab46095a128cc2f8d37abde99a0f099",
-        "Node name for S&R": "DSDImageGenerator"
+        "Node name for S&R": "DSDImageGenerator",
+        "aux_id": "irreveloper/ComfyUI-DSD-Node"
       },
       "widgets_values": [
         "",
@@ -342,8 +392,8 @@
         1,
         1,
         28,
-        1536,
-        768,
+        1024,
+        512,
         true
       ]
     }
@@ -412,16 +462,24 @@
       37,
       0,
       "DSD_MODEL"
+    ],
+    [
+      117,
+      39,
+      0,
+      37,
+      4,
+      "RESIZE_PARAMS"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 1.3310000000000017,
+      "scale": 0.8768324088719838,
       "offset": [
-        145.57362443895767,
-        125.29861875515397
+        773.2185529985686,
+        450.555653889974
       ]
     }
   },
