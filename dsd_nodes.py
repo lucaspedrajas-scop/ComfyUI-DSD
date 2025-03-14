@@ -145,14 +145,25 @@ class DSDGeminiPromptEnhancer:
     RETURN_NAMES = ("enhanced_prompt",)
     FUNCTION = "enhance_prompt"
     CATEGORY = "DSD"
+    OUTPUT_NODE = True  # This ensures that UI data is sent to the node
+    
+    def __init__(self):
+        self.enhanced_prompt = None
+    
+    def get_state(self):
+        return {
+            "enhanced_prompt": self.enhanced_prompt
+        }
     
     def enhance_prompt(self, image, prompt, api_key):
         if not IMPORTS_AVAILABLE:
             print("Warning: DSD modules not available. Using original prompt.")
+            self.enhanced_prompt = None
             return (prompt,)
             
         if not GEMINI_AVAILABLE:
             print("Warning: Google Gemini API not available. Returning original prompt.")
+            self.enhanced_prompt = None
             return (prompt,)
         
         if not api_key:
@@ -160,6 +171,7 @@ class DSDGeminiPromptEnhancer:
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
                 print("Warning: No API key provided for Gemini. Returning original prompt.")
+                self.enhanced_prompt = None
                 return (prompt,)
             
         # Convert from ComfyUI image to PIL
@@ -169,14 +181,20 @@ class DSDGeminiPromptEnhancer:
         try:
             
             # Call the imported enhance_prompt function
-            enhanced_prompt = enhance_prompt(pil_image, prompt,api_key)
+            enhanced_prompt = enhance_prompt(pil_image, prompt, api_key)
             
             print("Original prompt:", prompt)
             print("Enhanced prompt:", enhanced_prompt)
             
-            return (enhanced_prompt,)
+            # Store the enhanced prompt for UI display
+            self.enhanced_prompt = enhanced_prompt
+            
+            # Return the enhanced prompt and explicitly include it in the UI data
+            # Make sure enhanced_prompt is a proper string, not an array/list of characters
+            return {"ui": {"enhanced_prompt": str(enhanced_prompt)}, "result": (enhanced_prompt,)}
         except Exception as e:
             print(f"Error enhancing prompt: {e}")
+            self.enhanced_prompt = None
             return (prompt,)
 
 
