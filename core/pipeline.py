@@ -393,8 +393,8 @@ class FluxConditionalPipeline(DiffusionPipeline, SD3LoraLoaderMixin):
                 prompt=prompt_2,
                 num_images_per_prompt=num_images_per_prompt,
                 max_sequence_length=max_sequence_length,
-                device=device,
-            )
+                device=device
+                )
 
         if self.text_encoder is not None:
             if isinstance(self, SD3LoraLoaderMixin) and USE_PEFT_BACKEND:

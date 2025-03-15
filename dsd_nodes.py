@@ -94,15 +94,22 @@ class DSDModelLoader:
             ignore_mismatched_sizes=True,
             use_safetensors=True,
         )
+        
+        
 
         print("Loading pipeline...")
         
         # Use the optimized from_pretrained method (which was monkey-patched in pipeline.py)
+            # Use the optimized from_pretrained method
         pipe = FluxConditionalPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-dev",
+            "black-forest-labs/FLUX.1-schnell",
             transformer=transformer,
             torch_dtype=torch_dtype
-        )
+            )
+        
+        # Access and modify scheduler configs
+        pipe.scheduler.config.shift = 3
+        pipe.scheduler.config.use_dynamic_shifting = True
 
         print("Loading LoRA weights...")
         
@@ -419,9 +426,6 @@ class DSDModelDownloader:
                 "low_cpu_mem_usage": ("BOOLEAN", {"default": True, "tooltip": "Reduces CPU memory usage during model loading. Recommended for faster loading."}),
                 "model_cpu_offload": ("BOOLEAN", {"default": False, "tooltip": "Offloads state dict to reduce memory usage during loading. May slow down loading speed."}), 
                 "sequential_cpu_offload": ("BOOLEAN", {"default": False, "tooltip": "Enables sequential CPU offloading. Only use if low on VRAM. Significantly impacts loading speed."})
-            },
-            "optional": {
-                "hf_token": ("STRING", {"default": "", "multiline": False, "tooltip": "Enter your Hugging Face token here or use the environment variable HF_TOKEN."})
             }
         }
     
@@ -440,16 +444,9 @@ class DSDModelDownloader:
             "status_text": self.status_text
         }
     
-    def download_and_load_model(self, repo_id, force_download, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload, hf_token=""):
+    def download_and_load_model(self, repo_id, force_download, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload):
         if not IMPORTS_AVAILABLE:
             raise ImportError("Could not import DSD modules. Make sure DSD project files (pipeline.py, transformer.py) are properly installed in the parent directory.")
-        
-        # Get token from environment variable if not provided
-        if not hf_token:
-            hf_token = os.getenv("HF_TOKEN")
-            if hf_token:
-                self.status_text = "Using HF_TOKEN from environment variable"
-                print(self.status_text)
         
         # Create the dsd_model directory in ComfyUI models folder if it doesn't exist
         os.makedirs(dsd_model_path, exist_ok=True)
@@ -478,8 +475,7 @@ class DSDModelDownloader:
                     repo_id=repo_id,
                     local_dir=dsd_model_path,
                     local_dir_use_symlinks=False,
-                    resume_download=True,
-                    token=hf_token
+                    resume_download=True
                 )
                 
                 self.progress_value = 0.5
@@ -523,21 +519,28 @@ class DSDModelDownloader:
                 torch_dtype=torch_dtype,
                 low_cpu_mem_usage=low_cpu_mem_usage,
                 ignore_mismatched_sizes=True,
-                use_safetensors=True,
-                token=hf_token
+                use_safetensors=True
             )
             
             self.status_text = "Loading pipeline..."
             print(self.status_text)
             self.progress_value = 0.7
             
-            # Use the optimized from_pretrained method
+                        
+
+                        
+            # Using black-forest-labs/FLUX.1-schnell,so we don't need to login to Hugging Face
             pipe = FluxConditionalPipeline.from_pretrained(
-                "black-forest-labs/FLUX.1-dev",
+                "black-forest-labs/FLUX.1-schnell",
                 transformer=transformer,
-                torch_dtype=torch_dtype,
-                token=hf_token
-            )
+                torch_dtype=torch_dtype
+                )
+            
+            # Access and modify scheduler configs
+            pipe.scheduler.config.shift = 3
+            pipe.scheduler.config.use_dynamic_shifting = True
+
+            
             
             self.status_text = "Loading LoRA weights..."
             print(self.status_text)
