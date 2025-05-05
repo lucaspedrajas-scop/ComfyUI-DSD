@@ -8,9 +8,9 @@ import requests
 import json
 from pathlib import Path
 from tqdm import tqdm
-from huggingface_hub import hf_hub_download, snapshot_download, HfHubHTTPError
+from huggingface_hub import hf_hub_download, snapshot_download, login
 
-from huggingface_hub import login
+
 
 from .utils import get_model_path, get_lora_path, comfy_to_pil, pil_to_comfy, resize_and_center_crop, center_crop, pad_resize, fit_resize
 from .dsd_imports import FluxConditionalPipeline, FluxTransformer2DConditionalModel, enhance_prompt, IMPORTS_AVAILABLE
@@ -422,7 +422,7 @@ class DSDModelDownloader:
         return {
             "required": {
                 "repo_id": ("STRING", {"default": "primecai/dsd_model"}),
-                "HF_Token":("STRING", {"default": "your token here"}),
+                "hf_Token":("STRING", {"default": "your token here"}),
                 "force_download": ("BOOLEAN", {"default": False}),
                 "device": (["cuda", "cpu"], {"default": "cuda"}),
                 "dtype": (["bfloat16", "float16", "float32"], {"default": "bfloat16", "tooltip": "bfloat16 provides best speed/memory tradeoff"}),
@@ -447,12 +447,12 @@ class DSDModelDownloader:
             "status_text": self.status_text
         }
     
-    def download_and_load_model(self, repo_id,HF_Token, force_download, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload):
+    def download_and_load_model(self, repo_id,hf_Token, force_download, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload):
         if not IMPORTS_AVAILABLE:
             raise ImportError("Could not import DSD modules. Make sure DSD project files (pipeline.py, transformer.py) are properly installed in the parent directory.")
         # Make sure Hugging Face knows your token
-        login(token=HF_Token)                    # ← registers your token
-        os.environ["HUGGINGFACE_TOKEN"] = HF_Token  # ← also set env var
+        login(token=hf_Token)                    # ← registers your token
+        os.environ["HUGGINGFACE_TOKEN"] = hf_Token  # ← also set env var
         # Create the dsd_model directory in ComfyUI models folder if it doesn't exist
         os.makedirs(dsd_model_path, exist_ok=True)
         transformer_path = os.path.join(dsd_model_path, "transformer")
@@ -480,7 +480,7 @@ class DSDModelDownloader:
                     repo_id=repo_id,
                     local_dir=dsd_model_path,
                     local_dir_use_symlinks=False,
-                    use_auth_token=HF_Token,
+                    use_auth_token=hf_Token,
                     resume_download=True
                 )
                 
@@ -539,7 +539,7 @@ class DSDModelDownloader:
             pipe = FluxConditionalPipeline.from_pretrained(
                 "black-forest-labs/FLUX.1-schnell",
                 transformer=transformer,
-                use_auth_token=HF_Token,
+                use_auth_token=hf_Token,
                 torch_dtype=torch_dtype
                 )
             
