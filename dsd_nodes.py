@@ -450,7 +450,9 @@ class DSDModelDownloader:
     def download_and_load_model(self, repo_id,HF_Token, force_download, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload):
         if not IMPORTS_AVAILABLE:
             raise ImportError("Could not import DSD modules. Make sure DSD project files (pipeline.py, transformer.py) are properly installed in the parent directory.")
-        
+        # Make sure Hugging Face knows your token
+        login(token=HF_Token)                    # ← registers your token
+        os.environ["HUGGINGFACE_TOKEN"] = HF_Token  # ← also set env var
         # Create the dsd_model directory in ComfyUI models folder if it doesn't exist
         os.makedirs(dsd_model_path, exist_ok=True)
         transformer_path = os.path.join(dsd_model_path, "transformer")
