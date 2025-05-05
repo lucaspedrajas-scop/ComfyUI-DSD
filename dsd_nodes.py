@@ -420,7 +420,7 @@ class DSDModelDownloader:
         return {
             "required": {
                 "repo_id": ("STRING", {"default": "primecai/dsd_model"}),
-                "HF_Token":("STRING",{"default": "***"}),
+                "HF_Token":("STRING", {"default": "your token here"}),
                 "force_download": ("BOOLEAN", {"default": False}),
                 "device": (["cuda", "cpu"], {"default": "cuda"}),
                 "dtype": (["bfloat16", "float16", "float32"], {"default": "bfloat16", "tooltip": "bfloat16 provides best speed/memory tradeoff"}),
@@ -445,7 +445,7 @@ class DSDModelDownloader:
             "status_text": self.status_text
         }
     
-    def download_and_load_model(self, repo_id, force_download, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload):
+    def download_and_load_model(self, repo_id,HF_Token, force_download, device, dtype, low_cpu_mem_usage, model_cpu_offload, sequential_cpu_offload):
         if not IMPORTS_AVAILABLE:
             raise ImportError("Could not import DSD modules. Make sure DSD project files (pipeline.py, transformer.py) are properly installed in the parent directory.")
         
