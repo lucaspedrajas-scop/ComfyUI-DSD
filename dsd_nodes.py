@@ -420,6 +420,7 @@ class DSDModelDownloader:
         return {
             "required": {
                 "repo_id": ("STRING", {"default": "primecai/dsd_model"}),
+                "HF_Token":("STRING",{"default": "***"}),
                 "force_download": ("BOOLEAN", {"default": False}),
                 "device": (["cuda", "cpu"], {"default": "cuda"}),
                 "dtype": (["bfloat16", "float16", "float32"], {"default": "bfloat16", "tooltip": "bfloat16 provides best speed/memory tradeoff"}),
@@ -475,6 +476,7 @@ class DSDModelDownloader:
                     repo_id=repo_id,
                     local_dir=dsd_model_path,
                     local_dir_use_symlinks=False,
+                    use_auth_token=HF_Token,
                     resume_download=True
                 )
                 
@@ -533,6 +535,7 @@ class DSDModelDownloader:
             pipe = FluxConditionalPipeline.from_pretrained(
                 "black-forest-labs/FLUX.1-schnell",
                 transformer=transformer,
+                use_auth_token=HF_Token,
                 torch_dtype=torch_dtype
                 )
             
