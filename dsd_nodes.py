@@ -8,7 +8,9 @@ import requests
 import json
 from pathlib import Path
 from tqdm import tqdm
-from huggingface_hub import hf_hub_download, snapshot_download
+from huggingface_hub import hf_hub_download, snapshot_download, HfHubHTTPError
+
+from huggingface_hub import login
 
 from .utils import get_model_path, get_lora_path, comfy_to_pil, pil_to_comfy, resize_and_center_crop, center_crop, pad_resize, fit_resize
 from .dsd_imports import FluxConditionalPipeline, FluxTransformer2DConditionalModel, enhance_prompt, IMPORTS_AVAILABLE
